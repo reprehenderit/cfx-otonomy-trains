@@ -7,7 +7,7 @@ Train Management System for FiveM.
 Add line below to your server.cfg
 
 ```cfg
-ensure trains
+ensure cfx-otonomy-trains
 ```
 
 ## Features
