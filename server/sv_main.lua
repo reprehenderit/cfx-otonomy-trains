@@ -39,6 +39,10 @@ AddEventHandler('trains:playerReady', function()
     if playerCount == 1 then
         print("Initializing trains.")
         initializeTrains()
+    else
+        for id, data in pairs(trainData) do
+            TriggerClientEvent('trains:sync', source, data)
+        end
     end
 end)
 

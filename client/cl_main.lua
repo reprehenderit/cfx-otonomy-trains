@@ -14,7 +14,7 @@ local trainModels = {
 
 Config = Config or {}
 
-function requestTrainModels()
+local function requestTrainModels()
     for _, model in pairs(trainModels) do
         RequestModel(model)
         while not HasModelLoaded(model) do
@@ -23,17 +23,14 @@ function requestTrainModels()
     end
 end
 
-function spawnTrain(x, y, z)
-    local train = CreateMissionTrain(24, x, y, z, true)
-    SetEntityAsMissionEntity(train, true, true)
-    SetEntityCoords(train, x, y, z)
+local function spawnTrain(x, y, z)
+    local train = CreateMissionTrain(0, x, y, z, true)
     SetTrainSpeed(train, Config.TrainSpeed)
     SetTrainCruiseSpeed(train, Config.TrainSpeed)
 
-    -- blips
     local blip = nil
     if Config.TrainBlips then
-        local blip = AddBlipForEntity(train)
+        blip = AddBlipForEntity(train)
         SetBlipSprite(blip, 36)
         SetBlipColour(blip, 3)
         BeginTextCommandSetBlipName("STRING")
@@ -45,24 +42,29 @@ function spawnTrain(x, y, z)
 end
 
 RegisterNetEvent('trains:spawn')
-AddEventHandler('trains:spawn', function (data)
+AddEventHandler('trains:spawn', function(data)
     print("Spawning train at coordinates:", data.x, data.y, data.z)
-    requestTrainModels()
-    local train, blip = spawnTrain(data.x, data.y, data.z)
-    trains[data.id] = train
-    trainBlips[data.id] = blip
-end)
-
-RegisterNetEvent('trains:sync')
-AddEventHandler('trains:sync', function (data)
-    print("Syncing train with ID:", data.id)
     requestTrainModels()
     if not trains[data.id] then
         trains[data.id], trainBlips[data.id] = spawnTrain(data.x, data.y, data.z)
+    else
+        SetEntityCoords(trains[data.id], data.x, data.y, data.z)
+        SetTrainSpeed(trains[data.id], data.speed)
+        SetTrainCruiseSpeed(trains[data.id], data.speed)
     end
-    SetEntityCoords(trains[data.id], data.x, data.y, data.z)
-    SetTrainSpeed(trains[data.id], data.speed)
-    SetTrainCruiseSpeed(trains[data.id], data.speed)
+end)
+
+RegisterNetEvent('trains:sync')
+AddEventHandler('trains:sync', function(data)
+    if not trains[data.id] then
+        print("Syncing train with ID:", data.id)
+        requestTrainModels()
+        trains[data.id], trainBlips[data.id] = spawnTrain(data.x, data.y, data.z)
+    else
+        SetEntityCoords(trains[data.id], data.x, data.y, data.z)
+        SetTrainSpeed(trains[data.id], data.speed)
+        SetTrainCruiseSpeed(trains[data.id], data.speed)
+    end
 end)
 
 RegisterNetEvent('trains:delete')
@@ -77,20 +79,20 @@ AddEventHandler('trains:delete', function(id)
     end
 end)
 
-Citizen.CreateThread(function ()
+AddEventHandler('playerSpawned', function()
+    TriggerServerEvent('trains:playerReady')
+end)
+
+Citizen.CreateThread(function()
     requestTrainModels()
     while true do
         Wait(1000)
         for id, train in pairs(trains) do
             if DoesEntityExist(train) then
                 local coords = GetEntityCoords(train)
-                local speed  = 20.0
+                local speed = GetEntitySpeed(train)
                 TriggerServerEvent('trains:update', {id = id, x = coords.x, y = coords.y, z = coords.z, speed = speed})
             end
         end
     end
-end)
-
-AddEventHandler('playerSpawned', function()
-    TriggerServerEvent('trains:playerReady')
 end)
